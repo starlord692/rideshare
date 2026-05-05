@@ -8,6 +8,15 @@ services:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=rideshare_backend.settings
+      - MYSQLDATABASE=rideshare_db
+      - MYSQLUSER=rideshare_user
+      - MYSQLPASSWORD=ridesharepassword
+      - MYSQLHOST=db
+      - MYSQLPORT=3306
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=local-dev-key
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
     depends_on:
       db:
         condition: service_healthy

@@ -63,7 +63,7 @@
         }
     });
 
-    function addSOSMarker(data) {
+    function showSOSMarkerOnMap(data) {
         if (!window.map) return;
         
         const sosIcon = L.divIcon({
@@ -85,7 +85,7 @@
         // Center map on alert
         window.map.setView([data.latitude, data.longitude], 16);
     }
-    window.addSOSMarker = addSOSMarker;
+    window.showSOSMarkerOnMap = showSOSMarkerOnMap;
 </script>
 <style>
     @keyframes fadeIn {

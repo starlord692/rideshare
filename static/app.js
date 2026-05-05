@@ -140,8 +140,8 @@ document.onclick = function (e) {
     if (window.map && typeof window.showSOSMarkerOnMap === "function") {
         window.showSOSMarkerOnMap(sosData);
     } else {
-        console.log("Redirecting to dashboard...");
-        window.location.href = "/dashboard/";
+        console.log("Redirecting to map dashboard...");
+        window.location.href = "/";
     }
 };
 
@@ -225,13 +225,13 @@ async function sendSOSPayload(payload) {
         console.log("SOS response:", data);
         
         if(response.ok && data.success === true) {
-            alert("SOS sent");
+            showSuccessToast("SOS alert sent successfully!");
             if (data.emergency_contact_phone) {
                 console.log("SOS sent to emergency contact:", data.emergency_contact_phone);
             }
         } else {
             const errorMsg = data.message || "Failed to trigger SOS. Please call emergency services directly.";
-            alert(`Error: ${errorMsg}`);
+            showErrorToast(errorMsg);
         }
     } catch (error) {
         console.error('Network error during SOS trigger:', error);
@@ -314,39 +314,27 @@ function showSOSAlert(data) {
     }
 }
 
-// Marker Replacement Logic (Global Function)
-window.showSOSMarkerOnMap = function (data) {
-    if (!window.map || typeof L === "undefined") {
-        console.warn("Map not ready");
-        return;
-    }
+// UI Feedback Helpers
+function showSuccessToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification success';
+    toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }, 4000);
+}
 
-    const lat = parseFloat(data.latitude);
-    const lng = parseFloat(data.longitude);
-
-    console.log("Showing marker at:", lat, lng);
-
-    window.map.setView([lat, lng], 16);
-
-    // Remove old marker before adding a new one
-    if (window.currentSOSMarker) {
-        window.map.removeLayer(window.currentSOSMarker);
-    }
-
-    const sosIcon = L.divIcon({
-        className: 'sos-marker-container',
-        html: '<div class="sos-marker"></div>',
-        iconSize: [30, 30]
-    });
-
-    window.currentSOSMarker = L.marker([lat, lng], {icon: sosIcon, title: "SOS Alert"}).addTo(window.map);
-
-    window.currentSOSMarker.bindPopup(`
-        <div style="color: black;">
-            <strong>🚨 SOS ALERT</strong><br>
-            User: ${data.username}<br>
-            Contact: ${data.emergency_contact_phone || "N/A"}<br>
-            Time: ${data.created_at || ""}
-        </div>
-    `).openPopup();
-};
+function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification error';
+    toast.innerHTML = `<i class="bi bi-exclamation-octagon-fill"></i> ${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 500);
+    }, 5000);
+}

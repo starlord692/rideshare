@@ -2,15 +2,21 @@
 Django settings for rideshare_backend project.
 """
 
+import os
+from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
 
+# Load .env file for local development
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-dummy-key-for-dev'
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dummy-key-for-dev')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if host]
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -37,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,11 +76,15 @@ ASGI_APPLICATION = 'rideshare_backend.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'rideshare_db',
-        'USER': 'rideshare_user',
-        'PASSWORD': 'ridesharepassword',
-        'HOST': 'db',
-        'PORT': '3306',
+        'NAME': os.getenv('MYSQLDATABASE', 'rideshare_db'),
+        'USER': os.getenv('MYSQLUSER', 'rideshare_user'),
+        'PASSWORD': os.getenv('MYSQLPASSWORD', 'ridesharepassword'),
+        'HOST': os.getenv('MYSQLHOST', 'db'),
+        'PORT': os.getenv('MYSQLPORT', '3306'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        }
     }
 }
 
@@ -94,7 +105,9 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
@@ -116,12 +129,15 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": [os.getenv('REDIS_URL', 'redis://redis:6379')],
         },
     },
 }
 
 # Logging configuration
+import logging
+logger = logging.getLogger(__name__)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -142,6 +158,11 @@ LOGGING = {
         'level': 'INFO',
     },
     'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
         'django.db.backends': {
             'level': 'INFO',
             'handlers': ['console'],
@@ -160,12 +181,17 @@ LOGGING = {
     },
 }
 
-# Database engine log
-import logging
-logger = logging.getLogger(__name__)
-logger.info(f"Using database engine: {DATABASES['default']['ENGINE']}")
+# Startup Logging
+logger.info("🚀 Starting RidePool Server...")
+logger.info(f"DEBUG Mode: {DEBUG}")
+logger.info(f"Database Engine: {DATABASES['default']['ENGINE']}")
+logger.info(f"Database Host: {DATABASES['default']['HOST']}")
+logger.info(f"Redis URL: {CHANNEL_LAYERS['default']['CONFIG']['hosts'][0]}")
+
 if DATABASES['default']['ENGINE'] != 'django.db.backends.mysql':
-    logger.error("CRITICAL: Application is not using MySQL backend!")
+    logger.error("❌ CRITICAL: Application is not using MySQL backend!")
+else:
+    logger.info("✅ MySQL backend configured.")
 
 # Jazzmin Settings
 JAZZMIN_SETTINGS = {
