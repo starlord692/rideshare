@@ -3,6 +3,7 @@ Django settings for rideshare_backend project.
 """
 
 import os
+import dj_database_url
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
@@ -74,18 +75,10 @@ WSGI_APPLICATION = 'rideshare_backend.wsgi.application'
 ASGI_APPLICATION = 'rideshare_backend.asgi.application'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('MYSQLDATABASE'),
-        'USER': os.getenv('MYSQLUSER'),
-        'PASSWORD': os.getenv('MYSQLPASSWORD'),
-        'HOST': os.getenv('MYSQLHOST'),
-        'PORT': os.getenv('MYSQLPORT', '3306'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4',
-        },
-    }
+    "default": dj_database_url.parse(
+        os.getenv("MYSQL_URL"),
+        conn_max_age=600,
+    )
 }
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
@@ -183,8 +176,10 @@ LOGGING = {
 # Startup Logging
 logger.info("🚀 Starting RidePool Server...")
 logger.info(f"DEBUG Mode: {DEBUG}")
-logger.info(f"Database Engine: {DATABASES['default']['ENGINE']}")
-logger.info(f"Database Host: {DATABASES['default']['HOST']}")
+
+db_config = DATABASES.get('default', {})
+logger.info(f"Database Engine: {db_config.get('ENGINE')}")
+logger.info(f"Database Host: {db_config.get('HOST')}")
 logger.info(f"Redis URL: {CHANNEL_LAYERS['default']['CONFIG']['hosts'][0]}")
 
 if DATABASES['default']['ENGINE'] != 'django.db.backends.mysql':

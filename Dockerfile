@@ -22,4 +22,4 @@ COPY . /app/
 RUN dos2unix entrypoint.sh && chmod +x entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["sh", "-c", "daphne -b 0.0.0.0 -p ${PORT:-8000} rideshare_backend.asgi:application"]
+CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p ${PORT:-8000} rideshare_backend.asgi:application"]
