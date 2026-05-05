@@ -74,9 +74,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'rideshare_backend.wsgi.application'
 ASGI_APPLICATION = 'rideshare_backend.asgi.application'
 
+db_url = os.getenv("MYSQL_URL")
+
+if not db_url:
+    raise ValueError("MYSQL_URL is not set in Railway variables")
+
 DATABASES = {
     "default": dj_database_url.parse(
-        os.getenv("MYSQL_URL"),
+        db_url,
         conn_max_age=600,
     )
 }
