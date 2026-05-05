@@ -74,16 +74,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'rideshare_backend.wsgi.application'
 ASGI_APPLICATION = 'rideshare_backend.asgi.application'
 
-db_url = os.getenv("MYSQL_URL")
-
-if not db_url:
-    raise ValueError("MYSQL_URL is not set in Railway variables")
-
 DATABASES = {
-    "default": dj_database_url.parse(
-        db_url,
-        conn_max_age=600,
-    )
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("MYSQLDATABASE"),
+        "USER": os.getenv("MYSQLUSER"),
+        "PASSWORD": os.getenv("MYSQLPASSWORD"),
+        "HOST": os.getenv("MYSQLHOST"),
+        "PORT": os.getenv("MYSQLPORT", "3306"),
+        "OPTIONS": {
+            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
 }
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
