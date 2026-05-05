@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="padding: 6rem 1.5rem 1.5rem 1.5rem; height: 100%; overflow-y: auto;">
+    <h2 style="margin-bottom: 1.5rem;">Find a Ride</h2>
+
+    <!-- Search Filters -->
+    <div class="glass-panel" style="padding: 1rem; margin-bottom: 1.5rem;">
+        <div class="input-group">
+            <i class="bi bi-geo-alt"></i>
+            <input type="text" class="glass-input" placeholder="From: Pickup Location" id="search-pickup" value="{{ request.GET.pickup }}">
+        </div>
+        <div class="input-group">
+            <i class="bi bi-geo"></i>
+            <input type="text" class="glass-input" placeholder="To: Destination" id="search-dropoff" value="{{ request.GET.dropoff }}">
+        </div>
+        <button onclick="performSearch()" class="primary-btn btn-ripple">Search Rides</button>
+    </div>
+
+    <!-- Results Area -->
+    <h3 style="margin-bottom: 1rem; color: var(--text-secondary);">Available Rides</h3>
+    
+    <div id="loading-spinner" style="display: none; justify-content: center; padding: 2rem;">
+        <div class="pulse-animation" style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-color);"></div>
+    </div>
+
+    <div id="results-list" style="display: flex; flex-direction: column; gap: 1rem; padding-bottom: 5rem;">
+        <!-- Search results will be loaded here via JS -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        performSearch();
+    });
+
+    async function performSearch() {
+        const list = document.getElementById('results-list');
+        const spinner = document.getElementById('loading-spinner');
+        const pickup = document.getElementById('search-pickup').value;
+        const dropoff = document.getElementById('search-dropoff').value;
+        
+        list.style.display = 'none';
+        spinner.style.display = 'flex';
+
+        try {
+            const params = new URLSearchParams();
+            if (pickup) params.append('pickup', pickup);
+            if (dropoff) params.append('dropoff', dropoff);
+            
+            const response = await fetch('/api/rides/?' + params.toString());
+            const rides = await response.json();
+            
+            spinner.style.display = 'none';
+            list.style.display = 'flex';
+
+            if (rides.length === 0) {
+                list.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No rides found.</div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            rides.forEach(ride => {
+                const card = document.createElement('div');
+                card.className = 'glass-panel';
+                card.style.padding = '1rem';
+                card.style.animation = 'slideUp 0.3s ease-out';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <img src="https://ui-avatars.com/api/?name=${ride.driver_name}&background=random" alt="Driver" style="width: 40px; height: 40px; border-radius: 50%;">
+                            <div>
+                                <div style="font-weight: 600;">${ride.driver_name}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);"><i class="bi bi-star-fill" style="color: #fbbf24;"></i> ${ride.driver_rating}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 700; color: var(--success); font-size: 1.25rem;">₹${ride.total_cost}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">per seat</div>
+                        </div>
+                    </div>
+                    <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 0.75rem 0;">
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem;">
+                        <div><i class="bi bi-circle text-accent"></i> ${new Date(ride.departure_time).toLocaleString()}</div>
+                        <div><i class="bi bi-record-circle" style="color: var(--accent-color);"></i> <b>From:</b> ${ride.pickup_location}</div>
+                        <div><i class="bi bi-geo-alt-fill" style="color: var(--danger);"></i> <b>To:</b> ${ride.dropoff_location}</div>
+                    </div>
+                    <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 12px;">${ride.available_seats} seats left</span>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="/ride/${ride.id}/" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1.5rem; background: rgba(255,255,255,0.1);">Details</a>
+                            <button onclick="requestJoin(${ride.id})" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1.5rem;">Join</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        } catch (err) {
+            spinner.style.display = 'none';
+            list.innerHTML = 'Error loading rides.';
+        }
+    }
+
+    async function requestJoin(rideId) {
+        try {
+            const response = await fetch('/api/rides/request/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    ride: rideId,
+                    seats_requested: 1
+                })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                alert('Join request sent successfully!');
+                window.location.href = '/dashboard/';
+            } else {
+                alert(data.error || 'Failed to send request');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

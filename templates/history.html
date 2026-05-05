@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="padding: 6rem 1.5rem 1.5rem 1.5rem; height: 100%; overflow-y: auto; padding-bottom: 6rem;">
+    <h2 style="margin-bottom: 1.5rem;">Ride History</h2>
+
+    <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+        <button style="flex: 1; padding: 0.5rem; background: var(--glass-bg); border: 1px solid var(--accent-color); color: var(--accent-color); border-radius: 20px; font-weight: 600;">Completed</button>
+        <button style="flex: 1; padding: 0.5rem; background: transparent; border: 1px solid var(--glass-border); color: var(--text-secondary); border-radius: 20px;">Cancelled</button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <!-- History Card 1 -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="font-weight: 600;">Oct 12, 2023</div>
+                <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 4px 8px; border-radius: 12px;">Completed</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem; margin-bottom: 1rem;">
+                <div><i class="bi bi-record-circle text-accent"></i> Downtown Main St.</div>
+                <div><i class="bi bi-geo-alt-fill text-danger"></i> Tech Park Campus</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <img src="https://i.pravatar.cc/150?img=11" alt="Driver" style="width: 30px; height: 30px; border-radius: 50%;">
+                    <span style="font-size: 0.875rem;">Alex J.</span>
+                </div>
+                <a href="/ratings/" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1rem; font-size: 0.75rem;">Rate Driver</a>
+            </div>
+        </div>
+
+        <!-- History Card 2 -->
+        <div class="glass-panel" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div style="font-weight: 600;">Oct 10, 2023</div>
+                <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.2); color: var(--success); padding: 4px 8px; border-radius: 12px;">Completed</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem; margin-bottom: 1rem;">
+                <div><i class="bi bi-record-circle text-accent"></i> City Mall</div>
+                <div><i class="bi bi-geo-alt-fill text-danger"></i> Central Station</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <img src="https://i.pravatar.cc/150?img=32" alt="Driver" style="width: 30px; height: 30px; border-radius: 50%;">
+                    <span style="font-size: 0.875rem;">Sarah M.</span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.75rem;">Rated 5 <i class="bi bi-star-fill" style="color: #fbbf24;"></i></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; height: 100%; justify-content: center; align-items: center; padding: 1.5rem;">
+    
+    <div class="glass-panel" style="padding: 2rem; width: 100%; text-align: center;">
+        <img src="https://i.pravatar.cc/150?img=11" alt="Driver" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 1rem; border: 3px solid var(--accent-color);">
+        
+        <h2 style="margin-bottom: 0.5rem;">Rate Alex Johnson</h2>
+        <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 2rem;">How was your ride to Tech Park Campus?</div>
+
+        <!-- Star Rating -->
+        <div id="star-rating" style="font-size: 2.5rem; color: var(--text-secondary); margin-bottom: 2rem; display: flex; justify-content: center; gap: 0.5rem;">
+            <i class="bi bi-star star" data-val="1"></i>
+            <i class="bi bi-star star" data-val="2"></i>
+            <i class="bi bi-star star" data-val="3"></i>
+            <i class="bi bi-star star" data-val="4"></i>
+            <i class="bi bi-star star" data-val="5"></i>
+        </div>
+
+        <textarea class="glass-input" style="height: 100px; margin-bottom: 1.5rem;" placeholder="Add a comment (optional)"></textarea>
+
+        <a href="/history/" class="primary-btn btn-ripple" style="display: block; text-decoration: none;">Submit Review</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const stars = document.querySelectorAll('.star');
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const val = this.getAttribute('data-val');
+            
+            // Reset all
+            stars.forEach(s => {
+                s.classList.remove('bi-star-fill');
+                s.classList.add('bi-star');
+                s.style.color = 'var(--text-secondary)';
+                s.style.transform = 'scale(1)';
+            });
+
+            // Fill up to selected
+            for(let i=0; i<val; i++) {
+                stars[i].classList.remove('bi-star');
+                stars[i].classList.add('bi-star-fill');
+                stars[i].style.color = '#fbbf24';
+                // Pop animation
+                stars[i].style.transition = 'transform 0.2s';
+                stars[i].style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    stars[i].style.transform = 'scale(1)';
+                }, 200);
+            }
+        });
+    });
+</script>
+{% endblock %}

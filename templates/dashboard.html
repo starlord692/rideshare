@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="padding: 6rem 1.5rem 1.5rem 1.5rem; height: 100%; overflow-y: auto; padding-bottom: 6rem;">
+    <h2 style="margin-bottom: 1.5rem;">My Dashboard</h2>
+
+    <!-- My Active Ride Section (As Driver) -->
+    <section style="margin-bottom: 3rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--accent-color); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="bi bi-play-circle"></i> My Active Ride
+        </h3>
+        <div id="active-ride-container" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Active ride will be loaded here -->
+            <div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+                Loading...
+            </div>
+        </div>
+    </section>
+
+    <!-- My Offered Rides History Section -->
+    <section style="margin-bottom: 3rem;">
+        <h3 style="margin-bottom: 1rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="bi bi-car-front"></i> Offered Rides History
+        </h3>
+        <div id="offered-rides-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Offered rides will be loaded here via JS -->
+        </div>
+    </section>
+
+    <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 2rem 0;">
+
+    <!-- My Ride Requests Section (As Passenger) -->
+    <section>
+        <h3 style="margin-bottom: 1rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="bi bi-person-walking"></i> My Ride Requests
+        </h3>
+        <div id="joined-rides-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Joined rides/requests will be loaded here via JS -->
+        </div>
+    </section>
+</div>
+
+<!-- Modal for Requests for a specific ride -->
+<div id="requests-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; padding: 2rem; justify-content: center; align-items: flex-start; overflow-y: auto;">
+    <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 2rem; position: relative; margin-top: 5rem;">
+        <button onclick="closeModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;"><i class="bi bi-x-lg"></i></button>
+        <h3 id="modal-title" style="margin-bottom: 1.5rem;">Join Requests</h3>
+        <div id="modal-requests-list" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Ride specific requests will be loaded here -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+    });
+
+    async function loadDashboard() {
+        await Promise.all([
+            loadOfferedRides(),
+            loadJoinedRides()
+        ]);
+    }
+
+    async function loadOfferedRides() {
+        const list = document.getElementById('offered-rides-list');
+        const activeContainer = document.getElementById('active-ride-container');
+        try {
+            const response = await fetch('/api/rides/my-offered/');
+            const rides = await response.json();
+            
+            const activeRide = rides.find(r => ['open', 'upcoming', 'active', 'ongoing'].includes(r.status));
+            const pastRides = rides.filter(r => !['open', 'upcoming', 'active', 'ongoing'].includes(r.status));
+
+            // Render Active Ride
+            if (activeRide) {
+                activeContainer.innerHTML = `
+                    <div class="glass-panel" style="padding: 1.5rem; border-left: 4px solid var(--accent-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.2rem;">${activeRide.pickup_location} → ${activeRide.dropoff_location}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">${new Date(activeRide.departure_time).toLocaleString()}</div>
+                                <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-size: 0.7rem; font-weight: 700; color: var(--accent-color); text-transform: uppercase; padding: 2px 6px; background: rgba(59, 130, 246, 0.1); border-radius: 4px;">${activeRide.status}</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-secondary);">${activeRide.available_seats}/${activeRide.total_seats} seats available</span>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 1.2rem; color: var(--success); font-weight: 700;">₹${activeRide.total_cost}</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="viewRequests(${activeRide.id})" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem;"><i class="bi bi-people"></i> Requests</button>
+                            <a href="/chat/${activeRide.id}/" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--glass-bg);"><i class="bi bi-chat"></i> Chat</a>
+                            <button onclick="handleLifecycle(${activeRide.id}, 'complete')" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--success);"><i class="bi bi-check2-circle"></i> Complete</button>
+                            <button onclick="handleLifecycle(${activeRide.id}, 'cancel')" class="primary-btn btn-ripple" style="width: auto; padding: 0.5rem 1rem; font-size: 0.85rem; background: var(--danger);"><i class="bi bi-x-circle"></i> Cancel</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                activeContainer.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No active ride offered. <a href="/create-ride/" style="color: var(--accent-color);">Offer one now!</a></div>`;
+            }
+
+            // Render Past Rides
+            if (pastRides.length === 0) {
+                list.innerHTML = `<div class="glass-panel" style="padding: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">No past rides.</div>`;
+            } else {
+                list.innerHTML = '';
+                pastRides.forEach(ride => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-panel';
+                    card.style.padding = '1rem';
+                    card.style.opacity = '0.7';
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600;">${ride.pickup_location} → ${ride.dropoff_location}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary);">${new Date(ride.departure_time).toLocaleString()}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; padding: 2px 6px; background: rgba(255,255,255,0.05); border-radius: 4px;">${ride.status}</span>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function loadJoinedRides() {
+        const list = document.getElementById('joined-rides-list');
+        try {
+            const response = await fetch('/api/rides/my-requests/');
+            const requests = await response.json();
+            
+            if (requests.length === 0) {
+                list.innerHTML = `<div class="glass-panel" style="padding: 2rem; text-align: center; color: var(--text-secondary);">You haven't requested any rides yet.</div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+            requests.forEach(req => {
+                let statusColor = 'var(--text-secondary)';
+                if (req.status === 'accepted') statusColor = 'var(--success)';
+                if (req.status === 'rejected') statusColor = 'var(--danger)';
+
+                const card = document.createElement('div');
+                card.className = 'glass-panel';
+                card.style.padding = '1rem';
+                
+                let chatBtn = '';
+                if (req.status === 'accepted') {
+                    chatBtn = `<a href="/chat/${req.ride}/" class="sidebar-item" style="padding: 0.4rem 0.8rem; margin: 0; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem;"><i class="bi bi-chat"></i> Chat</a>`;
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 600;">${req.ride_pickup} → ${req.ride_dropoff}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">${new Date(req.ride_date).toLocaleString()}</div>
+                        </div>
+                        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                            <span style="font-size: 0.75rem; font-weight: 700; color: ${statusColor}; text-transform: uppercase; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                ${req.status}
+                            </span>
+                            ${chatBtn}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function viewRequests(rideId) {
+        const modal = document.getElementById('requests-modal');
+        const list = document.getElementById('modal-requests-list');
+        modal.style.display = 'flex';
+        list.innerHTML = 'Loading...';
+
+        try {
+            const response = await fetch(`/api/rides/${rideId}/requests/`);
+            const requests = await response.json();
+
+            if (requests.length === 0) {
+                list.innerHTML = 'No requests yet.';
+                return;
+            }
+
+            list.innerHTML = '';
+            requests.forEach(req => {
+                const item = document.createElement('div');
+                item.className = 'glass-panel';
+                item.style.padding = '1rem';
+                item.style.background = 'rgba(255,255,255,0.03)';
+                
+                let actionsHtml = '';
+                if (req.status === 'pending') {
+                    actionsHtml = `
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="handleRequest(${req.id}, 'approve')" class="primary-btn" style="padding: 0.4rem; background: var(--success); font-size: 0.8rem;">Approve</button>
+                            <button onclick="handleRequest(${req.id}, 'reject')" class="primary-btn" style="padding: 0.4rem; background: var(--danger); font-size: 0.8rem;">Reject</button>
+                        </div>
+                    `;
+                } else {
+                    actionsHtml = `<div style="margin-top: 0.5rem; font-size: 0.8rem; font-weight: 700; color: ${req.status === 'accepted' ? 'var(--success)' : 'var(--danger)'}; text-transform: uppercase;">${req.status}</div>`;
+                }
+
+                item.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <img src="https://ui-avatars.com/api/?name=${req.passenger_name}&background=random" style="width: 35px; border-radius: 50%;">
+                        <div>
+                            <div style="font-weight: 600;">${req.passenger_name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary);">${req.passenger_phone || 'No phone'}</div>
+                        </div>
+                    </div>
+                    ${actionsHtml}
+                `;
+                list.appendChild(item);
+            });
+        } catch (err) {
+            list.innerHTML = 'Error loading requests.';
+        }
+    }
+
+    async function handleRequest(requestId, action) {
+        try {
+            const response = await fetch(`/api/rides/requests/${requestId}/${action}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                closeModal();
+                loadDashboard();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to update request');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function handleLifecycle(rideId, action) {
+        if (!confirm(`Are you sure you want to ${action} this ride?`)) return;
+        try {
+            const response = await fetch(`/api/rides/${rideId}/${action}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            if (response.ok) {
+                loadDashboard();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to update ride status');
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('requests-modal').style.display = 'none';
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

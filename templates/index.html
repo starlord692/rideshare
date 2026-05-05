@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Splash Screen (Auto-hides via JS) -->
+<div id="splash-screen">
+    <i class="bi bi-car-front-fill car-icon"></i>
+    <h1 class="nav-brand" style="margin-top: 1rem; opacity: 0; animation: fadeIn 1s 1s forwards;">RidePool</h1>
+</div>
+
+<!-- Map Container -->
+<div id="map-container"></div>
+
+<!-- Floating Action Panel (Draggable/Swipeable concept) -->
+<div class="glass-panel floating-panel">
+    <h2 class="panel-header">Where to?</h2>
+    
+    <form action="/search/" method="GET">
+        <div class="input-group">
+            <i class="bi bi-geo-alt"></i>
+            <input type="text" class="glass-input" placeholder="Current Location" id="pickup-input" name="pickup">
+        </div>
+        
+        <div class="input-group">
+            <i class="bi bi-geo"></i>
+            <input type="text" class="glass-input" placeholder="Destination" id="dropoff-input" name="dropoff">
+        </div>
+        
+        <button type="submit" class="primary-btn btn-ripple">Find a Ride</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize Leaflet Map on Home Screen
+    let map;
+    document.addEventListener('DOMContentLoaded', () => {
+        map = L.map('map-container', { zoomControl: false }).setView([40.7128, -74.0060], 13); // Default to NY
+        window.map = map; // Make global for app.js
+        
+        // Dark theme map tiles
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // Try to get user location
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                map.setView([lat, lng], 15);
+                
+                // Add animated pulsing marker for user
+                const userIcon = L.divIcon({
+                    className: 'user-marker',
+                    html: '<div class="pulse-marker"></div>',
+                    iconSize: [20, 20]
+                });
+                L.marker([lat, lng], {icon: userIcon}).addTo(map);
+            });
+        }
+    });
+
+    function addSOSMarker(data) {
+        if (!window.map) return;
+        
+        const sosIcon = L.divIcon({
+            className: 'sos-marker-container',
+            html: '<div class="sos-marker"></div>',
+            iconSize: [30, 30]
+        });
+        
+        const marker = L.marker([data.latitude, data.longitude], {icon: sosIcon}).addTo(window.map);
+        
+        marker.bindPopup(`
+            <div style="color: black;">
+                <strong>Emergency SOS: ${data.username}</strong><br>
+                Contact: ${data.emergency_contact_phone}<br>
+                Time: ${new Date(data.created_at).toLocaleTimeString()}
+            </div>
+        `).openPopup();
+        
+        // Center map on alert
+        window.map.setView([data.latitude, data.longitude], 16);
+    }
+    window.addSOSMarker = addSOSMarker;
+</script>
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .user-marker {
+        position: relative;
+    }
+    .pulse-marker {
+        width: 15px;
+        height: 15px;
+        background-color: var(--accent-color);
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        animation: mapPulse 2s infinite;
+    }
+    @keyframes mapPulse {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+</style>
+{% endblock %}

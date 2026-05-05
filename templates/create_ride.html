@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="padding: 6rem 1.5rem 1.5rem 1.5rem; height: 100%; overflow-y: auto; padding-bottom: 6rem;">
+    <h2 style="margin-bottom: 1.5rem;">Offer a Ride</h2>
+
+    <div id="role-alert" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; flex-direction: column; align-items: center; text-align: center; gap: 1rem;">
+        <i class="bi bi-person-x-fill" style="font-size: 2rem; color: var(--danger);"></i>
+        <div style="font-weight: 600;">Only drivers can offer rides.</div>
+        <div style="font-size: 0.875rem; color: var(--text-secondary);">Please update your profile or contact support to become a driver.</div>
+        <a href="/dashboard/" class="primary-btn" style="width: auto; padding: 0.5rem 1.5rem; background: var(--glass-bg);">Go to Dashboard</a>
+    </div>
+
+    <div id="active-ride-alert" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; flex-direction: column; align-items: center; text-align: center; gap: 1rem;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; color: var(--danger);"></i>
+        <div style="font-weight: 600;">You already have an active ride.</div>
+        <div style="font-size: 0.875rem; color: var(--text-secondary);">Complete or cancel your current ride before offering a new one.</div>
+        <a href="/dashboard/" class="primary-btn" style="width: auto; padding: 0.5rem 1.5rem; background: var(--glass-bg);">Go to Dashboard</a>
+    </div>
+
+    <div id="create-ride-form-container" class="glass-panel" style="padding: 1.5rem;">
+        <form id="create-ride-form">
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Pickup Location</label>
+                <div class="input-group">
+                    <i class="bi bi-record-circle" style="color: var(--accent-color);"></i>
+                    <input type="text" id="pickup_location" class="glass-input" placeholder="Enter pickup point" required>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Dropoff Location</label>
+                <div class="input-group">
+                    <i class="bi bi-geo-alt-fill" style="color: var(--danger);"></i>
+                    <input type="text" id="dropoff_location" class="glass-input" placeholder="Enter destination" required>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Departure Date</label>
+                    <div class="input-group">
+                        <i class="bi bi-calendar-event"></i>
+                        <input type="date" id="departure_date" class="glass-input" required>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Time</label>
+                    <div class="input-group">
+                        <i class="bi bi-clock"></i>
+                        <input type="time" id="departure_time" class="glass-input" required>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Total Seats</label>
+                    <div class="input-group">
+                        <i class="bi bi-person-plus"></i>
+                        <input type="number" id="total_seats" class="glass-input" value="4" min="1" max="6" required>
+                    </div>
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.875rem;">Total Trip Cost (₹)</label>
+                    <div class="input-group">
+                        <i class="bi bi-currency-rupee"></i>
+                        <input type="number" id="total_cost" class="glass-input" placeholder="500.00" step="1.00" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="primary-btn btn-ripple">Publish Ride</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Fetch User Profile to check role
+        try {
+            const userResponse = await fetch('/api/auth/user/');
+            const user = await userResponse.json();
+            
+            if (user.role !== 'driver' && user.role !== 'both') {
+                document.getElementById('role-alert').style.display = 'flex';
+                document.getElementById('create-ride-form-container').style.opacity = '0.3';
+                document.getElementById('create-ride-form-container').style.pointerEvents = 'none';
+                return;
+            }
+        } catch (err) {
+            console.error("Failed to fetch user profile", err);
+        }
+
+        // Check for active ride
+        try {
+            const response = await fetch('/api/rides/my-offered/');
+            const rides = await response.json();
+            const hasActive = rides.some(r => ['open', 'upcoming', 'active', 'ongoing'].includes(r.status));
+            
+            if (hasActive) {
+                document.getElementById('active-ride-alert').style.display = 'flex';
+                document.getElementById('create-ride-form-container').style.opacity = '0.3';
+                document.getElementById('create-ride-form-container').style.pointerEvents = 'none';
+            }
+        } catch (err) {}
+
+        const form = document.getElementById('create-ride-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const departureDateTime = `${document.getElementById('departure_date').value}T${document.getElementById('departure_time').value}`;
+            
+            const payload = {
+                pickup_location: document.getElementById('pickup_location').value,
+                pickup_lat: 0, // Mock for now
+                pickup_lng: 0,
+                dropoff_location: document.getElementById('dropoff_location').value,
+                dropoff_lat: 0,
+                dropoff_lng: 0,
+                departure_time: departureDateTime,
+                total_seats: parseInt(document.getElementById('total_seats').value),
+                total_cost: parseFloat(document.getElementById('total_cost').value),
+                status: 'upcoming'
+            };
+
+            try {
+                const response = await fetch('/api/rides/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Ride published successfully!');
+                    window.location.href = `/ride/${data.id}/`;
+                } else {
+                    // Show detailed error messages from the backend
+                    let errorMsg = 'Failed to publish ride:\n';
+                    if (typeof data === 'object') {
+                        for (const key in data) {
+                            if (Array.isArray(data[key])) {
+                                errorMsg += `${key}: ${data[key].join(', ')}\n`;
+                            } else {
+                                errorMsg += `${key}: ${data[key]}\n`;
+                            }
+                        }
+                    } else {
+                        errorMsg += data || 'Unknown error';
+                    }
+                    alert(errorMsg);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('A network error occurred. Please try again.');
+            }
+        });
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
